@@ -22,7 +22,9 @@ run -i "$T/a.mp4" -i "$T/a.mp4" -an -sn -filter_complex "[0:v:0]fps=24,format=rg
 # Dead Frames style decode-only pass
 run -i "$T/a.mp4" -map 0:v:0 -an -f null -
 # concat demuxer join (stream copy)
-printf "file '%s'
+printf "file 'a.mp4'
+file 'a.mp4'
+" > "$T/list.txt"   # relative names: resolved against the list's own folder
 file '%s'
 " "$T/a.mp4" "$T/a.mp4" > "$T/list.txt"
 run -f concat -safe 0 -i "$T/list.txt" -map 0:v:0 -c copy -f mp4 "$T/joined.mp4"
