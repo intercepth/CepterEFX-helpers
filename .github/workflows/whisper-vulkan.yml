@@ -24,17 +24,23 @@ jobs:
       - name: Vulkan SDK (official LunarG installer)
         shell: pwsh
         env:
-          VULKAN_VERSION: 1.4.363.1
+          VULKAN_VERSION: 1.4.304.1
         run: |
           curl.exe -fsSL -o "$env:RUNNER_TEMP\VulkanSDK-Installer.exe" "https://sdk.lunarg.com/sdk/download/$env:VULKAN_VERSION/windows/VulkanSDK-$env:VULKAN_VERSION-Installer.exe"
           & "$env:RUNNER_TEMP\VulkanSDK-Installer.exe" --accept-licenses --default-answer --confirm-command install
           Add-Content $env:GITHUB_ENV "VULKAN_SDK=C:\VulkanSDK\$env:VULKAN_VERSION"
           Add-Content $env:GITHUB_PATH "C:\VulkanSDK\$env:VULKAN_VERSION\Bin"
+      - name: SPIRV-Headers (header-only, needed by ggml-vulkan)
+        shell: bash
+        run: |
+          git clone --depth 1 --branch vulkan-sdk-1.4.304.0 https://github.com/KhronosGroup/SPIRV-Headers.git spirv-headers
+          cmake -S spirv-headers -B spirv-headers/build -DCMAKE_INSTALL_PREFIX="$PWD/spirv-prefix"
+          cmake --install spirv-headers/build
       - name: Configure
         shell: bash
         run: |
           cmake -S src -B build -A x64 \
-            -DGGML_VULKAN=ON -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_PREFIX_PATH="$PWD/spirv-prefix" -DGGML_VULKAN=ON -DBUILD_SHARED_LIBS=OFF \
             -DGGML_NATIVE=OFF -DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON \
             -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_EXAMPLES=ON -DWHISPER_BUILD_SERVER=OFF \
             -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
