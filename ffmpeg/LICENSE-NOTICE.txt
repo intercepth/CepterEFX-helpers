@@ -1,0 +1,13 @@
+This ffmpeg.exe is FFmpeg (https://ffmpeg.org), built by the Cepter EFX project.
+
+It is licensed under the GNU General Public License, version 3 or later,
+because it links x264 (GPL). It also links LAME (LGPL) and zlib (zlib licence).
+
+Source code: every release of this repository attaches ffmpeg-sources.tar.gz,
+which holds the exact FFmpeg, x264, LAME and zlib source tarballs this binary
+was built from. The build script and the configure options are in
+ffmpeg/build.sh in this repository. FFmpeg's own licence texts are in the
+FFmpeg source (COPYING.GPLv3, COPYING.LGPLv3).
+
+FFmpeg is a trademark of Fabrice Bellard. This build is not affiliated with
+or endorsed by the FFmpeg project.
