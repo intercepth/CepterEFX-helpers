@@ -21,12 +21,10 @@ run -i "$T/a.mp4" -i "$T/a.mp3" -filter_complex "[0:a][1:a]amix=inputs=2[mix]" -
 run -i "$T/a.mp4" -i "$T/a.mp4" -an -sn -filter_complex "[0:v:0]fps=24,format=rgb24[c0];[1:v:0]fps=24,format=rgb24[c1];[c0]trim=end_frame=20,setpts=PTS-STARTPTS[c0t];[c1]trim=end_frame=1,setpts=PTS-STARTPTS[c1t];[c0t][c1t]concat=n=2:v=1:a=0[cj];[cj]tpad=stop_mode=clone:stop=2,split=2[v][s];[s]scale=320:-2:flags=fast_bilinear,format=yuv420p,select='gte(scene,0)',metadata=print[sc]" -map "[v]" -frames:v 22 -compression_level 1 -start_number 1 "$T/l%05d.png" -map "[sc]" -frames:v 22 -f null -
 # Dead Frames style decode-only pass
 run -i "$T/a.mp4" -map 0:v:0 -an -f null -
-# concat demuxer join (stream copy)
+# concat demuxer join (stream copy); names are relative to the list file's folder
 printf "file 'a.mp4'
 file 'a.mp4'
-" > "$T/list.txt"   # relative names: resolved against the list's own folder
-file '%s'
-" "$T/a.mp4" "$T/a.mp4" > "$T/list.txt"
+" > "$T/list.txt"
 run -f concat -safe 0 -i "$T/list.txt" -map 0:v:0 -c copy -f mp4 "$T/joined.mp4"
 # Frame Interpolation final encode from a PNG sequence
 run -f lavfi -i testsrc=s=320x180:r=24:d=1 -start_number 1 "$T/s%03d.png"
