@@ -24,7 +24,7 @@ jobs:
       - name: Vulkan SDK (official LunarG installer)
         shell: pwsh
         env:
-          VULKAN_VERSION: 1.4.313.2
+          VULKAN_VERSION: 1.4.304.1
         run: |
           curl.exe -fsSL -o "$env:RUNNER_TEMP\VulkanSDK-Installer.exe" "https://sdk.lunarg.com/sdk/download/$env:VULKAN_VERSION/windows/VulkanSDK-$env:VULKAN_VERSION-Installer.exe"
           & "$env:RUNNER_TEMP\VulkanSDK-Installer.exe" --accept-licenses --default-answer --confirm-command install
