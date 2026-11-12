@@ -1,0 +1,4 @@
+whisper-cli.exe is whisper.cpp (https://github.com/ggml-org/whisper.cpp), tag v1.9.4,
+built unmodified with the Vulkan GPU backend and a static runtime by the Cepter EFX project.
+whisper.cpp and ggml are MIT licensed (LICENSE-whisper.cpp.txt). Needs a graphics driver that
+provides vulkan-1.dll; with -ng it runs on the CPU only (requires a CPU with AVX2).

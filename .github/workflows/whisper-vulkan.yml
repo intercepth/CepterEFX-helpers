@@ -1,0 +1,57 @@
+name: Build whisper.cpp (Windows x64, Vulkan GPU)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to publish to (e.g. whisper-1.9.4-vulkan-1). Leave empty to build and test only."
+        required: false
+        default: ""
+
+env:
+  WHISPER_TAG: v1.9.4
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get whisper.cpp source
+        shell: bash
+        run: git clone --depth 1 --branch "$WHISPER_TAG" https://github.com/ggml-org/whisper.cpp.git src
+      - name: Vulkan SDK
+        uses: humbletim/setup-vulkan-sdk@v1.2.1
+        with:
+          vulkan-query-version: 1.4.304.0
+          vulkan-components: Vulkan-Headers, Vulkan-Loader, SPIRV-Tools, Glslang
+          vulkan-use-cache: true
+      - name: Configure
+        shell: bash
+        run: |
+          cmake -S src -B build -A x64 \
+            -DGGML_VULKAN=ON -DBUILD_SHARED_LIBS=OFF \
+            -DGGML_NATIVE=OFF -DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON \
+            -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_EXAMPLES=ON -DWHISPER_BUILD_SERVER=OFF \
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+      - name: Build
+        shell: bash
+        run: cmake --build build --config Release --target whisper-cli -j 4
+      - name: Test on CPU (the runner has no GPU)
+        shell: bash
+        run: |
+          EXE=$(find build -name whisper-cli.exe | head -1); echo "$EXE"; ls -l "$EXE"
+          curl -fsSL -o tiny.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin
+          "$EXE" -m tiny.bin -f src/samples/jfk.wav -ng -nt -np > out.txt 2>err.txt || { cat err.txt; exit 1; }
+          cat out.txt; grep -qi "ask not what your country" out.txt
+          mkdir pkg && cp "$EXE" pkg/whisper-cli.exe && cp src/LICENSE pkg/LICENSE-whisper.cpp.txt && cp whisper/NOTICE.txt pkg/
+          (cd pkg && 7z a -tzip -mx=9 ../whisper-vulkan-win64.zip whisper-cli.exe LICENSE-whisper.cpp.txt NOTICE.txt)
+      - uses: actions/upload-artifact@v4
+        with: { name: whisper-vulkan, path: whisper-vulkan-win64.zip }
+      - name: Publish
+        if: ${{ inputs.release_tag != '' }}
+        shell: bash
+        env: { GH_TOKEN: "${{ github.token }}", TAG: "${{ inputs.release_tag }}" }
+        run: |
+          gh release create "$TAG" --title "$TAG" --notes-file whisper/RELEASE-NOTES.md whisper-vulkan-win64.zip
