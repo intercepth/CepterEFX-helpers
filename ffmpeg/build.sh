@@ -57,7 +57,7 @@ cd "$SRC/ffmpeg"
   --disable-ffplay --disable-ffprobe --disable-hwaccels --disable-indevs --disable-outdevs \
   --enable-indev=lavfi \
   --disable-encoders \
-  --enable-encoder=libx264,libmp3lame,aac,prores_ks,png,mjpeg,tiff,pcm_s16le,pcm_s24le,pcm_f32le,rawvideo \
+  --enable-encoder=libx264,libmp3lame,aac,prores_ks,png,mjpeg,tiff,pcm_s16le,pcm_s24le,pcm_f32le,rawvideo,wrapped_avframe \
   --disable-muxers \
   --enable-muxer=mp4,mov,mp3,wav,image2,segment,rawvideo,null,pcm_s16le,pcm_f32le,s16le,f32le \
   --disable-protocols --enable-protocol=file,pipe

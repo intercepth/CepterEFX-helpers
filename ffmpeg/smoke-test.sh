@@ -17,4 +17,16 @@ run -i "$T/a.mp4" -frames:v 1 "$T/f.tif"
 run -f lavfi -i "color=c=black@0:s=640x360:r=1:d=1" -i "$T/a.mp4" -filter_complex "[1:v]scale=320:180:flags=lanczos,format=rgba,setpts=PTS-STARTPTS[l];[0:v]format=rgba[b];[b][l]overlay=x=10:y=10:format=auto,format=rgba" -frames:v 1 -update 1 "$T/s.png"
 run -i "$T/a.mp4" -map 0:v:0 -c copy -f null -
 run -i "$T/a.mp4" -i "$T/a.mp3" -filter_complex "[0:a][1:a]amix=inputs=2[mix]" -map "[mix]" -c:a pcm_f32le "$T/m.wav"
+# Frame Interpolation: scene score branch ends in "-f null -" (needs wrapped_avframe), loop join via concat filter
+run -i "$T/a.mp4" -i "$T/a.mp4" -an -sn -filter_complex "[0:v:0]fps=24,format=rgb24[c0];[1:v:0]fps=24,format=rgb24[c1];[c0]trim=end_frame=20,setpts=PTS-STARTPTS[c0t];[c1]trim=end_frame=1,setpts=PTS-STARTPTS[c1t];[c0t][c1t]concat=n=2:v=1:a=0[cj];[cj]tpad=stop_mode=clone:stop=2,split=2[v][s];[s]scale=320:-2:flags=fast_bilinear,format=yuv420p,select='gte(scene,0)',metadata=print[sc]" -map "[v]" -frames:v 22 -compression_level 1 -start_number 1 "$T/l%05d.png" -map "[sc]" -frames:v 22 -f null -
+# Dead Frames style decode-only pass
+run -i "$T/a.mp4" -map 0:v:0 -an -f null -
+# concat demuxer join (stream copy)
+printf "file '%s'
+file '%s'
+" "$T/a.mp4" "$T/a.mp4" > "$T/list.txt"
+run -f concat -safe 0 -i "$T/list.txt" -map 0:v:0 -c copy -f mp4 "$T/joined.mp4"
+# Frame Interpolation final encode from a PNG sequence
+run -f lavfi -i testsrc=s=320x180:r=24:d=1 -start_number 1 "$T/s%03d.png"
+run -framerate 24 -start_number 1 -i "$T/s%03d.png" -vf "scale=in_range=full:out_range=tv:out_color_matrix=bt709:flags=accurate_rnd+full_chroma_int,format=yuv420p" -c:v libx264 -crf 14 -preset medium -color_range tv -movflags +faststart -f mp4 "$T/fi.mp4"
 echo "all ok"; ls -l "$T" | head -30
