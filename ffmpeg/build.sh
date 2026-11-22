@@ -8,6 +8,7 @@ FFMPEG_TAG="n8.1.3"
 X264_COMMIT="b35605ace3ddf7c1a5d67a2eb553f034aef41d55"     # x264 'stable' branch
 LAME_VER="3.100"
 ZLIB_VER="1.3.1"
+VPX_TAG="v1.16.0"                                          # libvpx (BSD): VP9 encoder only, for the Library's preview clips
 
 ROOT="$(pwd)"
 WORK="$ROOT/_work"; PREFIX="$WORK/prefix"; SRC="$WORK/src"; OUT="$ROOT/_out"
@@ -26,7 +27,8 @@ fetch "https://github.com/madler/zlib/releases/download/v${ZLIB_VER}/zlib-${ZLIB
 fetch "https://downloads.sourceforge.net/lame/lame-${LAME_VER}.tar.gz" lame.tar.gz
 fetch "https://code.videolan.org/videolan/x264/-/archive/${X264_COMMIT}/x264-${X264_COMMIT}.tar.gz" x264.tar.gz
 fetch "https://github.com/FFmpeg/FFmpeg/archive/refs/tags/${FFMPEG_TAG}.tar.gz" ffmpeg.tar.gz
-for t in zlib lame x264 ffmpeg; do mkdir -p $t && tar xzf $t.tar.gz -C $t --strip-components=1; done
+fetch "https://github.com/webmproject/libvpx/archive/refs/tags/${VPX_TAG}.tar.gz" libvpx.tar.gz
+for t in zlib lame x264 ffmpeg libvpx; do mkdir -p $t && tar xzf $t.tar.gz -C $t --strip-components=1; done
 
 # zlib (needed by PNG, TIFF, compressed MOV atoms)
 ( cd zlib && CC=$HOST-gcc AR=$HOST-ar RANLIB=$HOST-ranlib CFLAGS="$CFLAGS_BASE" \
@@ -43,6 +45,13 @@ for t in zlib lame x264 ffmpeg; do mkdir -p $t && tar xzf $t.tar.gz -C $t --stri
   --disable-lavf --disable-ffms --disable-gpac --disable-lsmash --bit-depth=8 \
   --extra-cflags="$CFLAGS_BASE" && make -j"$(nproc)" && make install )
 
+# libvpx (BSD): the VP9 encoder only - FFmpeg's own native decoder plays VP8/VP9.
+# Used to make the Library's .webm preview clips.
+( cd libvpx && CROSS=$HOST- ./configure --target=x86_64-win64-gcc --prefix="$PREFIX" \
+  --enable-static --disable-shared --disable-examples --disable-tools --disable-docs \
+  --disable-unit-tests --disable-vp8 --disable-vp9-decoder --enable-vp9-encoder \
+  --extra-cflags="$CFLAGS_BASE" && make -j"$(nproc)" && make install )
+
 # FFmpeg: ALL decoders, demuxers, parsers, bitstream filters and filters stay on
 # (users drop in any footage and the panel uses many filters). Encoders, muxers,
 # protocols, devices and hardware paths are cut to what the panel actually calls.
@@ -52,19 +61,19 @@ cd "$SRC/ffmpeg"
   --prefix="$PREFIX/ff" --pkg-config-flags=--static \
   --extra-cflags="-I$PREFIX/include $CFLAGS_BASE" \
   --extra-ldflags="-L$PREFIX/lib -static -Wl,--gc-sections" \
-  --enable-gpl --enable-version3 --enable-libx264 --enable-libmp3lame --enable-zlib \
+  --enable-gpl --enable-version3 --enable-libx264 --enable-libmp3lame --enable-libvpx --enable-zlib \
   --disable-autodetect --disable-debug --disable-doc --disable-network \
   --disable-ffplay --disable-ffprobe --disable-hwaccels --disable-indevs --disable-outdevs \
   --enable-indev=lavfi \
   --disable-encoders \
-  --enable-encoder=libx264,libmp3lame,aac,prores_ks,png,mjpeg,tiff,pcm_s16le,pcm_s24le,pcm_f32le,rawvideo,wrapped_avframe \
+  --enable-encoder=libx264,libmp3lame,libvpx_vp9,aac,prores_ks,png,mjpeg,tiff,pcm_s16le,pcm_s24le,pcm_f32le,rawvideo,wrapped_avframe \
   --disable-muxers \
-  --enable-muxer=mp4,mov,mp3,wav,image2,segment,rawvideo,null,pcm_s16le,pcm_f32le,s16le,f32le \
+  --enable-muxer=mp4,mov,mp3,wav,webm,image2,segment,rawvideo,null,pcm_s16le,pcm_f32le,s16le,f32le \
   --disable-protocols --enable-protocol=file,pipe
 make -j"$(nproc)"
 $HOST-strip --strip-all ffmpeg.exe
 cp ffmpeg.exe "$OUT/ffmpeg.exe"
 
 # Sources for the GPL source offer, shipped with every release
-tar czf "$OUT/ffmpeg-sources.tar.gz" -C "$SRC" zlib.tar.gz lame.tar.gz x264.tar.gz ffmpeg.tar.gz
+tar czf "$OUT/ffmpeg-sources.tar.gz" -C "$SRC" zlib.tar.gz lame.tar.gz x264.tar.gz libvpx.tar.gz ffmpeg.tar.gz
 ls -l "$OUT"

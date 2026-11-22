@@ -29,4 +29,7 @@ run -f concat -safe 0 -i "$T/list.txt" -map 0:v:0 -c copy -f mp4 "$T/joined.mp4"
 # Frame Interpolation final encode from a PNG sequence
 run -f lavfi -i testsrc=s=320x180:r=24:d=1 -start_number 1 "$T/s%03d.png"
 run -framerate 24 -start_number 1 -i "$T/s%03d.png" -vf "scale=in_range=full:out_range=tv:out_color_matrix=bt709:flags=accurate_rnd+full_chroma_int,format=yuv420p" -c:v libx264 -crf 14 -preset medium -color_range tv -movflags +faststart -f mp4 "$T/fi.mp4"
+# Library Preview Maker: a silent VP9 .webm preview and a .jpg poster from it
+run -i "$T/a.mp4" -t 2 -vf "scale=480:-2" -an -c:v libvpx-vp9 -b:v 0 -crf 38 -row-mt 1 -deadline good -cpu-used 4 "$T/pv.webm"
+run -ss 1 -i "$T/pv.webm" -frames:v 1 -vf "scale=480:-2" -q:v 3 "$T/pv.jpg"
 echo "all ok"; ls -l "$T" | head -30
